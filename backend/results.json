@@ -1,0 +1,114 @@
+[
+  {
+    "url": "https://universalpaving.co.uk/products/kandla-grey-porcelain-paving-900x600",
+    "name": "Kandla Grey Outdoor Porcelain Paving Tiles - 900x600 - 20mm",
+    "variations": [
+      {
+        "rawTitle": "900x600x20mm - 22 Sqm - £22.04/m2 incl. VAT",
+        "size": "900x600x20mm",
+        "area": "22 sqm",
+        "tiles": 41,
+        "pricePerM2": 22.04,
+        "price": 485,
+        "inStock": true,
+        "sku": "PKGN206940"
+      },
+      {
+        "rawTitle": "900x600x20mm - 16.50 Sqm - 30 Tiles",
+        "size": "900x600x20mm",
+        "area": "16.50 sqm",
+        "tiles": 30,
+        "pricePerM2": null,
+        "price": 435,
+        "inStock": false,
+        "sku": null
+      },
+      {
+        "rawTitle": "900x600x20mm - 11 Sqm - 20 Tiles",
+        "size": "900x600x20mm",
+        "area": "11 sqm",
+        "tiles": 20,
+        "pricePerM2": null,
+        "price": 329,
+        "inStock": false,
+        "sku": ""
+      },
+      {
+        "rawTitle": "900x600x20mm - 5.5 Sqm - 10 Tiles",
+        "size": "900x600x20mm",
+        "area": "5.5 sqm",
+        "tiles": 10,
+        "pricePerM2": null,
+        "price": 229,
+        "inStock": false,
+        "sku": null
+      }
+    ]
+  },
+  {
+    "url": "https://www.pavedirect.co.uk/product/dunestone-black-porcelain-anti-slip-paving-packs",
+    "name": "Dunestone Black Patio Porcelain Paving Slabs – 900×600",
+    "variations": [
+      {
+        "rawSize": "600x900\n600x900 - 40pcs\nIn Stock",
+        "size": "600x900",
+        "pieces": 40,
+        "coverage": "21.6m²",
+        "thickness": "20mm",
+        "pricePerM2": 20.37,
+        "price": 440,
+        "inStock": true
+      },
+      {
+        "rawSize": "600x900\n600x900 - 20pcs\nIn Stock",
+        "size": "600x900",
+        "pieces": 20,
+        "coverage": "10.8m²",
+        "thickness": "20mm",
+        "pricePerM2": 29.17,
+        "price": 315,
+        "inStock": true
+      },
+      {
+        "rawSize": "600x900\n52pcs - 600x900\nIn Stock",
+        "size": "600x900",
+        "pieces": 52,
+        "coverage": "28.08m²",
+        "thickness": "16mm",
+        "pricePerM2": 18.16,
+        "price": 510,
+        "inStock": true
+      },
+      {
+        "rawSize": "600x900\n20pcs - 600x900\nIn Stock",
+        "size": "600x900",
+        "pieces": 20,
+        "coverage": "10.8m²",
+        "thickness": "16mm",
+        "pricePerM2": 28.24,
+        "price": 305,
+        "inStock": true
+      }
+    ]
+  },
+  {
+    "url": "https://www.naturalpavingstore.co.uk/shop/clearance-range/county-gris-outdoor-porcelain-paving-tiles-600mm-x-900mm-x-20mm-13-slabs/",
+    "name": "County Gris Outdoor Porcelain Paving Tiles (13 slabs = 7Sqm)",
+    "size": "600mm x 900mm x 20mm",
+    "pieces": 13,
+    "coverage": 7,
+    "price": "235.00",
+    "inStock": true
+  },
+  {
+    "url": "https://nustone.co.uk/product/raj-green-porcelain-patio-kit/?attributes_pa_format=crate-18-9m2",
+    "name": "Raj Green Outdoor Porcelain Paving Tiles - Patio Kit - 20mm",
+    "variations": [
+      {
+        "type": "crate",
+        "price": 425,
+        "inStock": true
+      }
+    ]
+  }
+]
