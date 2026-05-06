@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const { chromium } = require("playwright");
-
 const runScraper = require("../utils/runScraper");
+const extractOG = require("../utils/fetchOG");
 
 router.post("/test", async (req, res) => {
   let browser;
@@ -16,26 +16,52 @@ router.post("/test", async (req, res) => {
 
     console.log("🔍 Testing:", url);
 
-    browser = await chromium.launch({
-      headless: true,
-    });
+    const isAxiosSite = url.includes("universalpaving");
+    const isCloudflareSite = url.includes("pavedirect");
 
-    const context = await browser.newContext({
-      userAgent:
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-    });
+    let result = null;
+    let og = null;
 
-    const page = await context.newPage();
-    console.log(page, url);
-    // 🔥 run your scraper
-    const result = await runScraper(page, url);
+    if (isAxiosSite) {
+      result = await runScraper(null, url);
 
-    console.log("✅ Result:", result);
+      og = {
+        title: result?.name || null,
+        image: null,
+        description: null,
+      };
+    } else {
+      browser = await chromium.launch({
+        headless: !isCloudflareSite, // key line
+      });
 
-    await page.close();
+      const context = await browser.newContext({
+        userAgent:
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+      });
+
+      const page = await context.newPage();
+      await page.goto(url, {
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      });
+
+      if (isCloudflareSite) {
+        await page.waitForTimeout(8000);
+      } else {
+        await page.waitForTimeout(3000);
+      }
+
+      og = await extractOG(page);
+      result = await runScraper(page, url);
+
+      await page.close();
+      await browser.close();
+    }
 
     res.json({
       url,
+      og,
       result,
     });
   } catch (err) {

@@ -1,12 +1,5 @@
-async function scrapeNuStone(page, url) {
+async function scrapeNuStone(page) {
   try {
-    console.log("🌐 Scraping NuStone:", url);
-
-    await page.goto(url, {
-      waitUntil: "domcontentloaded",
-      timeout: 60000,
-    });
-
     await page.waitForTimeout(4000);
 
     const data = await page.evaluate(() => {
@@ -102,18 +95,30 @@ async function scrapeNuStone(page, url) {
 
     return {
       name: data.name,
+
+      productType: "single",
+
       variations: [
         {
-          type: "crate",
+          label: "crate",
+
+          size: null,
+          pieces: null,
+          coverage: null,
+
           price: data.cratePrice,
+          pricePerM2: null,
+
           inStock: data.inStock,
+
+          sku: null,
         },
       ],
     };
   } catch (err) {
     console.log("❌ NuStone error:", err.message);
     return { error: true };
-  } 
+  }
 }
 
 module.exports = scrapeNuStone;

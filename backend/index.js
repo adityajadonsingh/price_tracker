@@ -92,6 +92,8 @@ async function run() {
 
 run();
 
+// --------------------------------------------------------------------------------------
+
 // const fs = require("fs");
 // const cliProgress = require("cli-progress");
 // const { chromium } = require("playwright");

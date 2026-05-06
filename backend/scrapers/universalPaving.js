@@ -50,15 +50,20 @@ function extractTiles(text) {
   return match ? Number(match[1]) : null;
 }
 
-async function scrapeUniversalPaving(pageOrUrl, maybeUrl) {
+async function scrapeUniversalPaving(url) {
   try {
-    const url = typeof pageOrUrl === "string" ? pageOrUrl : maybeUrl;
     const jsonUrl = url.split("?")[0] + ".js";
 
     const res = await axios.get(jsonUrl);
     const product = res.data;
 
     const name = product.title;
+
+    let image = product.images?.[0]?.src || product.featured_image || null;
+
+    if (image?.startsWith("//")) {
+      image = `https:${image}`;
+    }
 
     const variations = product.variants.map((v) => {
       const raw = v.title;
@@ -69,25 +74,33 @@ async function scrapeUniversalPaving(pageOrUrl, maybeUrl) {
 
       const pricePerM2 = extractPricePerM2(raw);
 
-      // 🧠 if tiles missing → compute from area
       if (!tiles && size && area) {
         tiles = computeTilesFromArea(size, area);
       }
 
       return {
-        rawTitle: raw,
+        label: raw,
+
         size,
-        area,
-        tiles,
-        pricePerM2,
+
+        pieces: tiles || null,
+
+        coverage: area ? Number(area.replace(/[^0-9.]/g, "")) : null,
+
         price: v.price / 100,
+
+        pricePerM2,
+
         inStock: v.available,
-        sku: v.sku,
+
+        sku: v.sku || null,
       };
     });
 
     return {
       name,
+      image,
+      productType: "variation",
       variations,
     };
   } catch (err) {

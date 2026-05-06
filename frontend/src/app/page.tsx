@@ -6,7 +6,6 @@ const sites = [
   { name: "NuStone", key: "nustone" },
   { name: "Universal Paving", key: "universal" },
   { name: "Natural Paving", key: "natural" },
-  { name: "Pave Direct", key: "pavedirect" },
 ];
 
 export default function Home() {

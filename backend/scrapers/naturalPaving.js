@@ -1,10 +1,5 @@
-async function scrapeNaturalPaving(page, url) {
+async function scrapeNaturalPaving(page) {
   try {
-    await page.goto(url, {
-      waitUntil: "domcontentloaded",
-      timeout: 60000,
-    });
-
     // 🧠 wait until product content actually appears
     await page.waitForSelector(".product-title, h1", {
       timeout: 15000,
@@ -33,6 +28,46 @@ async function scrapeNaturalPaving(page, url) {
         let pieces = null;
         let coverage = null;
 
+        const buildResponse = ({
+          name,
+          size,
+          pieces,
+          coverage,
+          price,
+          inStock,
+        }) => {
+          const cleanPrice = Number(
+            String(price || "").replace(/[^0-9.]/g, ""),
+          );
+
+          return {
+            name,
+
+            productType: "single",
+
+            variations: [
+              {
+                label: size || "default",
+
+                size: size || null,
+                pieces: pieces || null,
+                coverage: coverage || null,
+
+                price: cleanPrice || null,
+
+                pricePerM2:
+                  coverage && cleanPrice
+                    ? Number((cleanPrice / coverage).toFixed(2))
+                    : null,
+
+                inStock: Boolean(inStock),
+
+                sku: null,
+              },
+            ],
+          };
+        };
+
         // 🟢 PRIMARY (from title)
         if (name) {
           const slabsMatch = name.match(/(\d+)\s*slabs?/i);
@@ -60,28 +95,28 @@ async function scrapeNaturalPaving(page, url) {
 
         const calcPrice = document.querySelector('[data-out="price"]');
         if (calcPrice) {
-          return {
+          return buildResponse({
             name,
             size,
             pieces,
             coverage,
             price: calcPrice.textContent.trim(),
             inStock: true,
-          };
+          });
         }
 
         const normalPrice = document.querySelector(".price");
         if (normalPrice) {
           const match = normalPrice.innerText.match(/£\s?\d+(\.\d{1,2})?/);
           if (match) {
-            return {
+            return buildResponse({
               name,
               size,
               pieces,
               coverage,
               price: match[0],
               inStock: !isOutOfStock,
-            };
+            });
           }
         }
 
@@ -104,21 +139,21 @@ async function scrapeNaturalPaving(page, url) {
       data = null;
     }
 
-    // 🔥 fallback retry
+    // fallback retry
     if (!data) {
       await page.waitForTimeout(2000);
 
       data = await page.evaluate(() => {
         const match = document.body.innerText.match(/£\s?\d+(\.\d{1,2})?/);
         return match
-          ? {
+          ? buildResponse({
               name: document.title,
               size: null,
               pieces: null,
               coverage: null,
               price: match[0],
               inStock: true,
-            }
+            })
           : null;
       });
     }
@@ -135,7 +170,12 @@ async function scrapeNaturalPaving(page, url) {
 
     return data;
   } catch (err) {
-    return { name: null, size: null, price: null, inStock: false, error: true };
+    return {
+      name: null,
+      productType: "single",
+      variations: [],
+      error: true,
+    };
   }
 }
 

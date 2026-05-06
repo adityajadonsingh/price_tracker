@@ -61,7 +61,7 @@ export default function SitePage() {
   const [selectedUrls, setSelectedUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const isAllSelected =
     fetchedUrls.length > 0 && selectedUrls.length === fetchedUrls.length;
 
@@ -154,6 +154,10 @@ export default function SitePage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const getPrimaryVariation = (item: any) => {
+    return item?.priceData?.variations?.[0] || null;
   };
 
   return (
@@ -313,52 +317,177 @@ export default function SitePage() {
 
         {/* SAVED PRODUCTS */}
         <div className="grid md:grid-cols-3 gap-4">
-          {urls.map((item) => (
-            <div
-              key={item._id}
-              className="bg-white p-4 rounded-xl shadow hover:shadow-md transition"
-            >
-              {item.image && (
-                <div className="relative h-40 mb-2">
-                  <Image
-                    src={item.image}
-                    alt=""
-                    fill
-                    className="object-cover rounded"
-                    unoptimized
-                  />
-                </div>
-              )}
-
-              <p className="text-sm font-semibold">
-                {item.priceData?.name || item.title}
-              </p>
-
-              {item.priceData && (
-                <div className="mt-2">
-                  <p className="text-lg font-bold text-green-600">
-                    £{item.priceData.price}
-                  </p>
-
-                  <p className="text-xs text-gray-600">
-                    {item.priceData.pieces && `${item.priceData.pieces} pcs`}
-                    {item.priceData.pieces && item.priceData.coverage && " • "}
-                    {item.priceData.coverage && `${item.priceData.coverage}m²`}
-                  </p>
-                </div>
-              )}
-
-              <a
-                href={item.url}
-                target="_blank"
-                className="text-xs text-blue-600 mt-2 block"
+          {urls.map((item) => {
+            const variation = getPrimaryVariation(item);
+            console.log(item);
+            return (
+              <div
+                key={item._id}
+                className="bg-white p-4 rounded-xl shadow hover:shadow-md transition"
               >
-                View →
-              </a>
-            </div>
-          ))}
+                {/* IMAGE */}
+                {item.image && (
+                  <div className="relative h-40 mb-3">
+                    <Image
+                      src={item.image}
+                      alt=""
+                      fill
+                      className="object-cover rounded"
+                      unoptimized
+                    />
+                  </div>
+                )}
+
+                {/* TITLE */}
+                <p className="text-sm font-semibold line-clamp-2">
+                  {item.priceData?.name ?? item.title ?? "Unnamed Product"}
+                </p>
+
+                {/* PRIMARY VARIATION */}
+                {variation && (
+                  <div className="mt-3 space-y-1">
+                    {/* PRICE */}
+                    <p className="text-2xl font-bold text-green-600">
+                      £{variation.price ?? "-"}
+                    </p>
+
+                    {/* DETAILS */}
+                    <p className="text-xs text-gray-600">
+                      {variation.pieces && `${variation.pieces} pcs`}
+
+                      {variation.pieces && variation.coverage && " • "}
+
+                      {variation.coverage && `${variation.coverage}m²`}
+                    </p>
+
+                    {/* STOCK */}
+                    <p
+                      className={`text-xs font-medium ${
+                        variation.inStock ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {variation.inStock ? "In Stock" : "Out of Stock"}
+                    </p>
+
+                    {/* VARIATION BUTTON */}
+                    {item.priceData?.productType === "variation" && (
+                      <button
+                        onClick={() => setSelectedProduct(item)}
+                        className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded mt-2 hover:bg-blue-100"
+                      >
+                        View Variations ({item.priceData.variations.length})
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* LINK */}
+                <a
+                  href={item.url}
+                  target="_blank"
+                  className="text-xs text-blue-600 mt-4 inline-block"
+                >
+                  View →
+                </a>
+              </div>
+            );
+          })}
         </div>
       </div>
+      {/* VARIATIONS MODAL */}
+      {selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-xl max-h-[90vh] overflow-hidden">
+            {/* HEADER */}
+            <div className="flex justify-between items-start p-5 border-b">
+              <div>
+                <h2 className="text-lg font-bold">
+                  {selectedProduct.priceData?.name}
+                </h2>
+
+                <p className="text-sm text-gray-500 mt-1">
+                  {selectedProduct.priceData?.variations?.length} variations
+                </p>
+              </div>
+
+              <button
+                onClick={() => setSelectedProduct(null)}
+                className="text-gray-500 hover:text-black text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* BODY */}
+            <div className="p-5 overflow-y-auto max-h-[75vh] space-y-4">
+              {selectedProduct.priceData?.variations?.map(
+                (v: any, idx: number) => (
+                  <div key={idx} className="border rounded-xl p-4 bg-gray-50">
+                    {/* LABEL */}
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <p className="font-semibold text-sm">
+                          {v.label || `Variation ${idx + 1}`}
+                        </p>
+
+                        {v.size && (
+                          <p className="text-xs text-gray-500 mt-1">{v.size}</p>
+                        )}
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-green-600">
+                          £{v.price ?? "-"}
+                        </p>
+
+                        {v.pricePerM2 && (
+                          <p className="text-xs text-gray-500">
+                            £{v.pricePerM2}/m²
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* DETAILS */}
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div className="bg-white rounded-lg p-3 border">
+                        <p className="text-gray-500 text-xs">Coverage</p>
+                        <p className="font-semibold">
+                          {v.coverage ? `${v.coverage}m²` : "-"}
+                        </p>
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 border">
+                        <p className="text-gray-500 text-xs">Pieces</p>
+                        <p className="font-semibold">{v.pieces ?? "-"}</p>
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 border">
+                        <p className="text-gray-500 text-xs">SKU</p>
+                        <p className="font-semibold break-all">
+                          {v.sku || "-"}
+                        </p>
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 border">
+                        <p className="text-gray-500 text-xs">Stock</p>
+
+                        <p
+                          className={`font-semibold ${
+                            v.inStock ? "text-green-600" : "text-red-600"
+                          }`}
+                        >
+                          {v.inStock ? "In Stock" : "Out of Stock"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

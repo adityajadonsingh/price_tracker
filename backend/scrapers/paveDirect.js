@@ -11,7 +11,9 @@ async function scrapePaveDirect(page, url) {
       const name =
         document.querySelector(".itemTitle h1")?.innerText.trim() || null;
 
-      const rows = document.querySelectorAll(".pricingTable table tr");
+      const rows = document.querySelectorAll(
+        ".pricingTable table tr"
+      );
 
       const variations = [];
 
@@ -30,39 +32,25 @@ async function scrapePaveDirect(page, url) {
         const priceSpans = row.querySelectorAll(".multiPrice");
 
         const perM2 = priceSpans[0]?.innerText.trim();
-        const perPack = priceSpans[2]?.innerText.trim();
+        const perPack = priceSpans[1]?.innerText.trim();
 
         const stockText =
           row.querySelector(".inStock")?.innerText.toLowerCase() || "";
 
         const inStock = stockText.includes("in stock");
 
-        variations.push(
-          (() => {
-            const raw = sizeText;
-
-            // 🟢 Extract size (600x900)
-            const sizeMatch = raw.match(/\d+\s*x\s*\d+/i);
-            const cleanSize = sizeMatch
-              ? sizeMatch[0].replace(/\s/g, "")
-              : null;
-
-            // 🟢 Extract pieces (40pcs / 52pcs)
-            const piecesMatch = raw.match(/(\d+)\s*pcs/i);
-            const pieces = piecesMatch ? Number(piecesMatch[1]) : null;
-
-            return {
-              rawSize: raw, // keep original for debug
-              size: cleanSize,
-              pieces, // ✅ NEW FIELD
-              coverage,
-              thickness,
-              pricePerM2: perM2 ? Number(perM2.replace(/[^0-9.]/g, "")) : null,
-              price: perPack ? Number(perPack.replace(/[^0-9.]/g, "")) : null,
-              inStock,
-            };
-          })(),
-        );
+        variations.push({
+          size: sizeText,
+          coverage,
+          thickness,
+          pricePerM2: perM2
+            ? Number(perM2.replace(/[^0-9.]/g, ""))
+            : null,
+          price: perPack
+            ? Number(perPack.replace(/[^0-9.]/g, ""))
+            : null,
+          inStock,
+        });
       });
 
       return {
@@ -72,6 +60,7 @@ async function scrapePaveDirect(page, url) {
     });
 
     return data;
+
   } catch (err) {
     return {
       name: null,

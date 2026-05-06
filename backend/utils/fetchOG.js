@@ -1,20 +1,16 @@
-const fetchOG = async (page, url) => {
+const extractOG = async (page) => {
   try {
-    await page.goto(url, {
-      waitUntil: "domcontentloaded",
-      timeout: 60000,
-    });
+    // 🚫 NO page.goto here
 
-    // ⏳ wait for JS + possible Cloudflare
-    await page.waitForTimeout(5000);
+    // ⏳ small wait (page already loaded, but let JS settle)
+    await page.waitForTimeout(1000);
 
-    // 🚫 Detect Cloudflare block
+    // 🚫 Detect Cloudflare
     const isBlocked = await page.evaluate(() => {
       return document.body.innerText.includes("Just a moment");
     });
 
     if (isBlocked) {
-      console.log("🚫 Blocked by Cloudflare:", url);
       return {
         title: "Blocked",
         image: null,
@@ -44,7 +40,6 @@ const fetchOG = async (page, url) => {
 
     return data;
   } catch (err) {
-    console.log("❌ OG error:", url);
     return {
       title: null,
       image: null,
@@ -53,4 +48,4 @@ const fetchOG = async (page, url) => {
   }
 };
 
-module.exports = fetchOG;
+module.exports = extractOG;
