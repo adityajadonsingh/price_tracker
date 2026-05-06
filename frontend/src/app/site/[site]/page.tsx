@@ -72,7 +72,7 @@ export default function SitePage() {
 
   /* 🟢 FETCH SAVED PRODUCTS */
   const fetchSavedUrls = async () => {
-    const res = await fetch(`http://localhost:5000/api/urls/${site}`);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/urls/${site}`);
     const data = await res.json();
     setUrls(data);
   };
@@ -88,7 +88,7 @@ export default function SitePage() {
 
   /* 🟢 LOAD STORED SITEMAP */
   const loadSitemap = async () => {
-    const res = await fetch(`http://localhost:5000/api/sitemap/${site}`);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sitemap/${site}`);
     const data = await res.json();
 
     setFetchedUrls(data.urls || []);
@@ -106,7 +106,7 @@ export default function SitePage() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/sitemap/fetch", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sitemap/fetch`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -138,7 +138,7 @@ export default function SitePage() {
     setSaving(true);
 
     try {
-      await fetch("http://localhost:5000/api/urls/save", {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/urls/save`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
