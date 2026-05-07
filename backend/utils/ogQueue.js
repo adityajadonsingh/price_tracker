@@ -2,7 +2,7 @@ const { chromium } = require("playwright");
 const extractOG = require("./fetchOG");
 const TrackedUrl = require("../models/TrackedUrl");
 const runScraper = require("./runScraper");
-async function processQueue(items, concurrency = 2) {
+async function processQueue(items, concurrency = 1) {
   console.log(`🚀 Queue started (${items.length} items)`);
 
   let index = 0;
@@ -32,10 +32,10 @@ async function processQueue(items, concurrency = 2) {
           scraped = await runScraper(null, item.url);
 
           og = {
-            title: scraped?.name || null,
-            description: null,
-            image: scraped?.image || null,
-          };
+  title: scraped?.name || null,
+  description: null,
+  image: scraped?.image || null,
+};
         } else {
           // DIFFERENT MODES
           if (isCloudflareSite) {
