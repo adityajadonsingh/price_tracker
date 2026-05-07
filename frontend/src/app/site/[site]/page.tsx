@@ -88,7 +88,9 @@ export default function SitePage() {
 
   /* 🟢 LOAD STORED SITEMAP */
   const loadSitemap = async () => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sitemap/${site}`);
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/sitemap/${site}`,
+    );
     const data = await res.json();
 
     setFetchedUrls(data.urls || []);
@@ -106,13 +108,16 @@ export default function SitePage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sitemap/fetch`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/sitemap/fetch`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sitemapUrl, site }),
         },
-        body: JSON.stringify({ sitemapUrl, site }),
-      });
+      );
 
       const data = await res.json();
 
@@ -274,41 +279,33 @@ export default function SitePage() {
                   </button>
                 </div>
 
-                {/* SELECT ALL */}
-                <div className="flex justify-between mb-2 text-sm">
-                  <label className="flex gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      onChange={handleSelectAll}
-                    />
-                    {isAllSelected ? "Unselect All" : "Select All"}
-                  </label>
-
-                  <span>
-                    {selectedUrls.length}/{fetchedUrls.length}
-                  </span>
-                </div>
 
                 <div className="max-h-[400px] overflow-auto space-y-1">
-                  {fetchedUrls.map((url, i) => (
-                    <div
-                      key={i}
-                      className="flex justify-between text-xs p-1 hover:bg-gray-50"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedUrls.includes(url)}
-                        onChange={() => toggleUrl(url)}
-                      />
-
-                      <span className="flex-1 mx-2 break-all">{url}</span>
-
-                      <Link href={url} target="_blank">
-                        🔗
-                      </Link>
+                  {selectedUrls.length === 0 ? (
+                    <div className="text-sm text-gray-500 text-center py-8">
+                      No URLs selected
                     </div>
-                  ))}
+                  ) : (
+                    selectedUrls.map((url, i) => (
+                      <div
+                        key={i}
+                        className="flex justify-between text-xs p-1 hover:bg-gray-50"
+                      >
+                        <button
+                          onClick={() => toggleUrl(url)}
+                          className="text-red-500"
+                        >
+                          ✕
+                        </button>
+
+                        <span className="flex-1 mx-2 break-all">{url}</span>
+
+                        <Link href={url} target="_blank">
+                          🔗
+                        </Link>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
