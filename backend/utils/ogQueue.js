@@ -2,7 +2,7 @@ const { chromium } = require("playwright");
 const extractOG = require("./fetchOG");
 const TrackedUrl = require("../models/TrackedUrl");
 const runScraper = require("./runScraper");
-async function processQueue(items, concurrency = 1) {
+async function processQueue(items, concurrency = 2) {
   console.log(`🚀 Queue started (${items.length} items)`);
 
   let index = 0;
