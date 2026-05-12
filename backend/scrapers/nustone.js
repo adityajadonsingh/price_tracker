@@ -3,14 +3,13 @@ async function scrapeNuStone(page) {
     await page.waitForTimeout(4000);
 
     const data = await page.evaluate(() => {
-      const name = document.querySelector("h1")?.innerText.trim() || null;
-
-      let cratePrice = null;
-      let inStock = true;
-
       const bodyText = document.body.innerText.toLowerCase();
 
-      // 🛑 STOCK CHECK
+      const name =
+        document.querySelector("h1")?.innerText.trim() || null;
+
+      let inStock = true;
+
       if (
         bodyText.includes("out of stock") ||
         bodyText.includes("please contact us")
@@ -18,106 +17,222 @@ async function scrapeNuStone(page) {
         inStock = false;
       }
 
-      // 🥇 METHOD 1 — DIRECT CRATE LABEL (BEST)
-      const labels = Array.from(document.querySelectorAll("label"));
+      // ======================================================
+      // PRICE EXTRACTION
+      // ======================================================
 
-      for (const label of labels) {
-        const text = label.innerText.toLowerCase();
+      let price = null;
 
-        if (text.includes("crate") && text.includes("£")) {
-          const match = text.match(/£\s?\d+(\.\d{1,2})?/);
-          if (match) {
-            cratePrice = parseFloat(match[0].replace(/[^0-9.]/g, ""));
-            break;
-          }
-        }
-      }
+      // 🆕 METHOD 1 — NEW SALE/NORMAL LAYOUT
+      const salePriceContainer = document.querySelector(
+        "p.tw-text-xl.tw-font-bold.tw-text-black",
+      );
 
-      // 🥈 METHOD 2 — SALE / NORMAL PRICE BLOCK
-      if (!cratePrice) {
-        const container = document.querySelector(
-          "div.tw-mt-3.tw-flex.tw-flex-col.tw-font-poppins",
+      if (salePriceContainer) {
+        const spans = Array.from(
+          salePriceContainer.querySelectorAll("span"),
         );
 
-        if (container) {
-          const spans = container.querySelectorAll("span");
+        const validPrices = [];
 
-          const validPrices = [];
+        spans.forEach((span) => {
+          const text = span.textContent?.trim() || "";
 
-          spans.forEach((span) => {
-            const text = span.innerText;
+          if (!text.includes("£")) return;
 
-            if (!text.includes("£")) return;
+          const isOld =
+            span.classList.contains("tw-line-through") ||
+            window
+              .getComputedStyle(span)
+              .textDecoration
+              .includes("line-through");
 
-            const isOld =
-              span.classList.contains("tw-line-through") ||
-              window
-                .getComputedStyle(span)
-                .textDecoration.includes("line-through");
+          if (isOld) return;
 
-            if (isOld) return;
+          const num = parseFloat(
+            text.replace(/[^0-9.]/g, ""),
+          );
 
-            const num = parseFloat(text.replace(/[^0-9.]/g, ""));
+          if (!isNaN(num) && num > 100) {
+            validPrices.push(num);
+          }
+        });
 
-            if (!isNaN(num) && num > 100) {
-              validPrices.push(num);
-            }
-          });
+        if (validPrices.length > 0) {
+          price = validPrices[validPrices.length - 1];
+        }
+      }
 
-          if (validPrices.length > 0) {
-            cratePrice = validPrices[validPrices.length - 1];
+      // 🆕 METHOD 2 — EXISTING LAYOUT
+      if (!price) {
+        const priceContainer = document.querySelector(
+          ".tw-mt-4.tw-flex.tw-flex-row.tw-gap-x-3.tw-items-center",
+        );
+
+        if (priceContainer) {
+          const finalPrice =
+            priceContainer.querySelector(".tw-text-3xl");
+
+          if (finalPrice) {
+            price = parseFloat(
+              finalPrice.innerText.replace(/[^0-9.]/g, ""),
+            );
           }
         }
       }
 
-      if (!cratePrice) {
-        const bodyText = document.body.innerText;
+      // ======================================================
+      // SPECIFICATION TABLE
+      // ======================================================
 
-        // 🟢 find crate size (e.g. "23.50M² CRATE")
-        const sizeMatch = bodyText.match(/([\d.]+)\s*m²\s*crate/i);
+      const specs = {};
 
-        const priceMatch = bodyText.match(/£\s?\d+(\.\d{1,2})?\s*\/\s*m/);
+      const allDivs = Array.from(
+        document.querySelectorAll("div"),
+      );
 
-        if (sizeMatch && priceMatch) {
-          const crateSize = parseFloat(sizeMatch[1]);
-          const perM2 = parseFloat(priceMatch[0].replace(/[^0-9.]/g, ""));
+      const specBox = allDivs.find((div) => {
+        const heading = div.querySelector("h2");
 
-          cratePrice = Math.round(perM2 * crateSize);
+        return (
+          heading &&
+          heading.innerText
+            .toLowerCase()
+            .includes("specifications")
+        );
+      });
+
+      if (specBox) {
+        const rows =
+          specBox.querySelectorAll(".tw-flex.tw-flex-row");
+
+        rows.forEach((row) => {
+          const cols = row.querySelectorAll("div");
+
+          if (cols.length >= 2) {
+            const key = cols[0]
+              .innerText.trim()
+              .toLowerCase()
+              .replace(":", "");
+
+            const value = cols[1].innerText.trim();
+
+            if (key && value) {
+              specs[key] = value;
+            }
+          }
+        });
+      }
+
+      // ======================================================
+      // NORMALIZED DATA
+      // ======================================================
+
+      const size = specs["size"] || null;
+
+      const thickness =
+        specs["thickness"] || null;
+
+      const finish =
+        specs["finish"] || null;
+
+      const pieces = specs["tiles per crate"]
+        ? Number(
+            specs["tiles per crate"].replace(
+              /[^0-9]/g,
+              "",
+            ),
+          )
+        : null;
+
+      // ======================================================
+      // COVERAGE EXTRACTION
+      // ======================================================
+
+      let coverage = null;
+
+      // 🆕 METHOD 1 — BODY TEXT
+      const coverageMatch =
+        document.body.innerText.match(
+          /([\d.]+)\s*m²\s*crate/i,
+        );
+
+      if (coverageMatch) {
+        coverage = Number(coverageMatch[1]);
+      }
+
+      // 🆕 METHOD 2 — PRODUCT CODE
+      if (!coverage && specs["product code"]) {
+        const match =
+          specs["product code"].match(
+            /-(\d+(\.\d+)?)$/,
+          );
+
+        if (match) {
+          coverage = Number(match[1]);
         }
+      }
+
+      // ======================================================
+      // SKU
+      // ======================================================
+
+      const sku =
+        specs["product code"] || null;
+
+      // ======================================================
+      // PRICE PER M2
+      // ======================================================
+
+      let pricePerM2 = null;
+
+      if (coverage && price) {
+        pricePerM2 = Number(
+          (price / coverage).toFixed(2),
+        );
       }
 
       return {
         name,
-        cratePrice,
-        inStock,
+
+        productType: "single",
+
+        variations: [
+          {
+            label: size || "crate",
+
+            size,
+
+            thickness,
+
+            finish,
+
+            pieces,
+
+            coverage,
+
+            price,
+
+            pricePerM2,
+
+            inStock,
+
+            sku,
+          },
+        ],
       };
     });
 
-    return {
-      name: data.name,
-
-      productType: "single",
-
-      variations: [
-        {
-          label: "crate",
-
-          size: null,
-          pieces: null,
-          coverage: null,
-
-          price: data.cratePrice,
-          pricePerM2: null,
-
-          inStock: data.inStock,
-
-          sku: null,
-        },
-      ],
-    };
+    return data;
   } catch (err) {
     console.log("❌ NuStone error:", err.message);
-    return { error: true };
+
+    return {
+      name: null,
+      productType: "single",
+      variations: [],
+      error: true,
+    };
   }
 }
 

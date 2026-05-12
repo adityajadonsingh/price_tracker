@@ -56,7 +56,7 @@ async function scrapeUniversalPaving(url) {
 
     const res = await axios.get(jsonUrl);
     const product = res.data;
-
+    console.log("Scraped product:", product);
     const name = product.title;
 
     let image = product.images?.[0]?.src || product.featured_image || null;

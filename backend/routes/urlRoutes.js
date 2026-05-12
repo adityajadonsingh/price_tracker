@@ -41,16 +41,33 @@ router.post("/save", async (req, res) => {
   }
 });
 
-// 📥 Get URLs
+const Product = require("../models/Product");
+
 router.get("/:site", async (req, res) => {
   try {
-    const data = await TrackedUrl.find({ site: req.params.site }).sort({
+    // 🔥 Stonecera products
+    if (req.params.site === "stonecera") {
+      const data = await Product.find({
+        source: "self",
+      }).sort({
+        updatedAt: -1,
+      });
+
+      return res.json(data);
+    }
+
+    // 🔥 competitor products
+    const data = await TrackedUrl.find({
+      site: req.params.site,
+    }).sort({
       createdAt: -1,
     });
 
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: err.message,
+    });
   }
 });
 
@@ -61,6 +78,22 @@ router.delete("/delete/:site", async (req, res) => {
     res.json({ message: "Deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete Single Product
+router.delete("/:id", async (req, res) => {
+  try {
+    await TrackedUrl.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: "Product deleted",
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err.message,
+    });
   }
 });
 

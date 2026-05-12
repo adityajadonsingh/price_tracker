@@ -9,7 +9,8 @@ const urlRoutes = require("./routes/urlRoutes");
 const sitemapRoutes = require("./routes/sitemapRoutes");
 const ogRoutes = require("./routes/ogRoutes");
 const testScraperRoute = require("./routes/testScraper");
-
+const productRoutes = require("./routes/productRoutes");
+const comparisonRoutes = require("./routes/comparisonRoutes");
 const app = express();
 
 /* DB */
@@ -33,6 +34,10 @@ app.use("/api/urls", urlRoutes);
 app.use("/api/sitemap", sitemapRoutes);
 
 app.use("/api/og", ogRoutes);
+
+app.use("/api/products", productRoutes);
+
+app.use("/api/comparison", comparisonRoutes);
 
 /* HEALTH CHECK */
 app.get("/", (req, res) => {

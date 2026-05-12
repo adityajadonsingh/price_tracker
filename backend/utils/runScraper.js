@@ -5,7 +5,7 @@ const scrapeNaturalPaving = require("../scrapers/naturalPaving");
 
 async function runScraper(page, url) {
   if (url.includes("naturalpavingstore")) {
-    return await scrapeNaturalPaving(page);
+    return scrapeNaturalPaving(page, url);
   }
 
   if (url.includes("nustone")) {

@@ -1,175 +1,98 @@
-async function scrapeNaturalPaving(page) {
+const axios = require("axios");
+
+function normalizeVariation(product, variation) {
+  const label =
+    variation?.attributes?.[0]?.value || "default";
+
+  const rawPrice =
+    product?.prices?.price ||
+    product?.prices?.regular_price;
+
+  const price = rawPrice
+    ? Number(rawPrice) / 100
+    : null;
+
+  return {
+    label,
+
+    size:
+      product?.dimensions?.height || null,
+
+    pieces: null,
+
+    coverage: null,
+
+    price,
+
+    pricePerM2: null,
+
+    inStock: product?.is_in_stock || false,
+
+    sku: product?.sku || null,
+  };
+}
+
+async function scrapeNaturalPaving(page, url) {
   try {
-    // 🧠 wait until product content actually appears
-    await page.waitForSelector(".product-title, h1", {
-      timeout: 15000,
+    const slug =
+      url
+        .split("/")
+        .filter(Boolean)
+        .pop() || "";
+
+    const apiUrl = `https://www.naturalpavingstore.co.uk/wp-json/wc/store/products?slug=${slug}`;
+
+    console.log("🌐 API:", apiUrl);
+
+    const res = await axios.get(apiUrl, {
+      headers: {
+        Accept: "application/json",
+
+        "User-Agent":
+          "PostmanRuntime/7.43.4",
+
+        Connection: "keep-alive",
+      },
     });
 
-    let data;
+    const product = res.data?.[0];
 
-    try {
-      data = await page.evaluate(() => {
-        const bodyText = document.body.innerText.toLowerCase();
-
-        const isOutOfStock =
-          bodyText.includes("out of stock") ||
-          bodyText.includes("unavailable") ||
-          bodyText.includes("sold out");
-
-        const name =
-          document.querySelector(".product-title")?.textContent.trim() ||
-          document.querySelector("h1")?.innerText.trim() ||
-          null;
-
-        const size =
-          document.querySelector(".product-subtitle")?.textContent.trim() ||
-          null;
-
-        let pieces = null;
-        let coverage = null;
-
-        const buildResponse = ({
-          name,
-          size,
-          pieces,
-          coverage,
-          price,
-          inStock,
-        }) => {
-          const cleanPrice = Number(
-            String(price || "").replace(/[^0-9.]/g, ""),
-          );
-
-          return {
-            name,
-
-            productType: "single",
-
-            variations: [
-              {
-                label: size || "default",
-
-                size: size || null,
-                pieces: pieces || null,
-                coverage: coverage || null,
-
-                price: cleanPrice || null,
-
-                pricePerM2:
-                  coverage && cleanPrice
-                    ? Number((cleanPrice / coverage).toFixed(2))
-                    : null,
-
-                inStock: Boolean(inStock),
-
-                sku: null,
-              },
-            ],
-          };
-        };
-
-        // 🟢 PRIMARY (from title)
-        if (name) {
-          const slabsMatch = name.match(/(\d+)\s*slabs?/i);
-          if (slabsMatch) pieces = Number(slabsMatch[1]);
-
-          const coverageMatch = name.match(/=\s*(\d+(\.\d+)?)\s*sqm/i);
-          if (coverageMatch) coverage = Number(coverageMatch[1]);
-        }
-
-        // 🔥 FALLBACK (from packline selector)
-        if (!pieces || !coverage) {
-          const packLine =
-            document.querySelector('[data-out="packline"]')?.innerText || "";
-
-          if (packLine) {
-            // extract pcs
-            const pcsMatch = packLine.match(/(\d+)\s*pcs/i);
-            if (pcsMatch) pieces = Number(pcsMatch[1]);
-
-            // extract m²
-            const coverageMatch = packLine.match(/\((\d+(\.\d+)?)\s*m²\)/i);
-            if (coverageMatch) coverage = Number(coverageMatch[1]);
-          }
-        }
-
-        const calcPrice = document.querySelector('[data-out="price"]');
-        if (calcPrice) {
-          return buildResponse({
-            name,
-            size,
-            pieces,
-            coverage,
-            price: calcPrice.textContent.trim(),
-            inStock: true,
-          });
-        }
-
-        const normalPrice = document.querySelector(".price");
-        if (normalPrice) {
-          const match = normalPrice.innerText.match(/£\s?\d+(\.\d{1,2})?/);
-          if (match) {
-            return buildResponse({
-              name,
-              size,
-              pieces,
-              coverage,
-              price: match[0],
-              inStock: !isOutOfStock,
-            });
-          }
-        }
-
-        const match = document.body.innerText.match(/£\s?\d+(\.\d{1,2})?/);
-
-        if (match) {
-          return {
-            name,
-            size,
-            pieces,
-            coverage,
-            price: match[0],
-            inStock: !isOutOfStock,
-          };
-        }
-
-        return null;
-      });
-    } catch (e) {
-      data = null;
-    }
-
-    // fallback retry
-    if (!data) {
-      await page.waitForTimeout(2000);
-
-      data = await page.evaluate(() => {
-        const match = document.body.innerText.match(/£\s?\d+(\.\d{1,2})?/);
-        return match
-          ? buildResponse({
-              name: document.title,
-              size: null,
-              pieces: null,
-              coverage: null,
-              price: match[0],
-              inStock: true,
-            })
-          : null;
-      });
-    }
-
-    return (
-      data || {
+    if (!product) {
+      return {
         name: null,
-        size: null,
-        price: null,
-        inStock: false,
+        productType: "single",
+        variations: [],
         error: true,
-      }
+      };
+    }
+
+    const variations =
+      product.variations?.length > 0
+        ? product.variations.map((v) =>
+            normalizeVariation(product, v),
+          )
+        : [
+            normalizeVariation(product, {
+              attributes: [],
+            }),
+          ];
+
+    return {
+      name: product.name,
+
+      productType:
+        variations.length > 1
+          ? "variation"
+          : "single",
+
+      variations,
+    };
+  } catch (err) {
+    console.log(
+      "❌ Natural scraper error:",
+      err.response?.status || err.message,
     );
 
-    return data;
-  } catch (err) {
     return {
       name: null,
       productType: "single",
