@@ -31,7 +31,7 @@ export default function ComparisonListPage() {
 
   const fetchComparisons = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/comparison/all");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comparison/all`);
 
       const data = await res.json();
 

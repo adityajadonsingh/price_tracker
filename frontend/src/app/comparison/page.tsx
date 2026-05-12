@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { ArrowRightLeft, Check, ChevronDown, Search } from "lucide-react";
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function ComparisonPage() {
   const [myProducts, setMyProducts] = useState<any[]>([]);
