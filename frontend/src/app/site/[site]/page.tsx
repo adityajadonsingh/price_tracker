@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-
+import ComparisonModal from "@/components/ComparisonModal";
 import {
   ChevronRight,
   ChevronDown,
@@ -78,6 +78,7 @@ export default function SitePage() {
   const site = params.site as string;
 
   const [filteredUrls, setFilteredUrls] = useState<string[]>([]);
+  const [filteredSearch, setFilteredSearch] = useState("");
   const [urls, setUrls] = useState<any[]>([]);
   const [tree, setTree] = useState<any>({});
   const [sitemapUrl, setSitemapUrl] = useState("");
@@ -85,7 +86,32 @@ export default function SitePage() {
   const [selectedUrls, setSelectedUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<"sitemap" | "product">("sitemap");
+  const [sectionsOpen, setSectionsOpen] = useState(false);
+  const [singleUrl, setSingleUrl] = useState("");
+  const [singleLoading, setSingleLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [selectedCompetitor, setSelectedCompetitor] = useState<any>(null);
+  const [comparisonMap, setComparisonMap] = useState<any>({});
+
+  const searchedFilteredUrls = filteredUrls.filter((url) =>
+    url.toLowerCase().includes(filteredSearch.toLowerCase()),
+  );
+
+  const fetchComparisonMap = async () => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/comparison/status-map/${site}`,
+      );
+
+      const data = await res.json();
+
+      setComparisonMap(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   /* FETCH PRODUCTS */
   const fetchSavedUrls = async () => {
@@ -96,9 +122,7 @@ export default function SitePage() {
     setUrls(data);
   };
 
-  useEffect(() => {
-    fetchSavedUrls();
-  }, []);
+
 
   useEffect(() => {
     const interval = setInterval(fetchSavedUrls, 5000);
@@ -117,8 +141,9 @@ export default function SitePage() {
     setFetchedUrls(data.urls || []);
     setTree(data.tree || {});
   };
-
   useEffect(() => {
+    fetchSavedUrls();
+    fetchComparisonMap();
     loadSitemap();
   }, []);
 
@@ -150,6 +175,34 @@ export default function SitePage() {
       setTree(data.tree || {});
     } finally {
       setLoading(false);
+    }
+  };
+
+  /* FETCH SINGLE PRODUCT */
+  const fetchSingleProduct = async () => {
+    if (!singleUrl) return;
+
+    setSingleLoading(true);
+
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/urls/save`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          site,
+          urls: [singleUrl],
+        }),
+      });
+
+      setSingleUrl("");
+
+      fetchSavedUrls();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSingleLoading(false);
     }
   };
 
@@ -234,145 +287,235 @@ export default function SitePage() {
           </div>
         </div>
 
-        {/* SITEMAP */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm flex gap-3">
-          <input
-            type="text"
-            placeholder="Enter sitemap URL..."
-            value={sitemapUrl}
-            onChange={(e) => setSitemapUrl(e.target.value)}
-            className="border border-gray-400 p-3 flex-1 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-          />
+        {/* FETCH BOX */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm space-y-5">
+          {/* TABS */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setActiveTab("sitemap")}
+              className={`px-5 py-2 rounded-xl text-sm font-medium transition ${
+                activeTab === "sitemap"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100"
+              }`}
+            >
+              Fetch Sitemap
+            </button>
 
-          <button
-            onClick={fetchSitemap}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 rounded-xl flex items-center gap-2"
-          >
-            <Boxes size={18} />
+            <button
+              onClick={() => setActiveTab("product")}
+              className={`px-5 py-2 rounded-xl text-sm font-medium transition ${
+                activeTab === "product"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100"
+              }`}
+            >
+              Fetch Product
+            </button>
+          </div>
 
-            {loading ? "Fetching..." : "Fetch"}
-          </button>
+          {/* SITEMAP TAB */}
+          {activeTab === "sitemap" && (
+            <div className="flex gap-3">
+              <input
+                type="text"
+                placeholder="Enter sitemap URL..."
+                value={sitemapUrl}
+                onChange={(e) => setSitemapUrl(e.target.value)}
+                className="border border-gray-400 p-3 flex-1 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+              />
+
+              <button
+                onClick={fetchSitemap}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-5 rounded-xl flex items-center gap-2"
+              >
+                <Boxes size={18} />
+
+                {loading ? "Fetching..." : "Fetch"}
+              </button>
+            </div>
+          )}
+
+          {/* PRODUCT TAB */}
+          {activeTab === "product" && (
+            <div className="flex gap-3">
+              <input
+                type="text"
+                placeholder="Enter product URL..."
+                value={singleUrl}
+                onChange={(e) => setSingleUrl(e.target.value)}
+                className="border border-gray-400 p-3 flex-1 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+              />
+
+              <button
+                onClick={fetchSingleProduct}
+                className="bg-green-600 hover:bg-green-700 text-white px-5 rounded-xl flex items-center gap-2"
+              >
+                <Plus size={18} />
+
+                {singleLoading ? "Fetching..." : "Fetch Product"}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* TREE + FILTER */}
         {fetchedUrls.length > 0 && (
-          <>
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* TREE */}
-              <div className="bg-white p-5 rounded-2xl shadow-sm max-h-[500px] overflow-auto">
-                <h2 className="font-semibold mb-4">Categories</h2>
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            {/* HEADER */}
+            <button
+              onClick={() => setSectionsOpen(!sectionsOpen)}
+              className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition"
+            >
+              <div>
+                <h2 className="font-semibold text-left">Sitemap Results</h2>
 
-                {Object.entries(tree).map(([key, node]) => (
-                  <TreeNode
-                    key={key}
-                    nodeKey={key}
-                    node={node}
-                    onSelect={(urls) => {
-                      setFilteredUrls(urls || []);
-                    }}
-                  />
-                ))}
+                <p className="text-sm text-gray-500">
+                  {fetchedUrls.length} URLs
+                </p>
               </div>
 
-              {/* FILTERED */}
-              {filteredUrls.length > 0 && (
-                <div className="bg-white p-5 rounded-2xl shadow-sm">
+              {sectionsOpen ? (
+                <ChevronDown size={20} />
+              ) : (
+                <ChevronRight size={20} />
+              )}
+            </button>
+
+            {/* CONTENT */}
+            {sectionsOpen && (
+              <div className="p-5 border-t space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* TREE */}
+                  <div className="bg-gray-50 p-5 rounded-2xl max-h-[500px] overflow-auto">
+                    <h2 className="font-semibold mb-4">Categories</h2>
+
+                    {Object.entries(tree).map(([key, node]) => (
+                      <TreeNode
+                        key={key}
+                        nodeKey={key}
+                        node={node}
+                        onSelect={(urls) => {
+                          setFilteredUrls(urls || []);
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* FILTERED */}
+                  {filteredUrls.length > 0 && (
+                    <div className="bg-gray-50 p-5 rounded-2xl">
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="font-semibold">
+                          Filtered ({filteredUrls.length})
+                        </h2>
+
+                        <button
+                          onClick={() =>
+                            setSelectedUrls((prev) => [
+                              ...new Set([...prev, ...filteredUrls]),
+                            ])
+                          }
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm"
+                        >
+                          <Plus size={16} />
+                          Add All
+                        </button>
+                      </div>
+
+                      <div className="mb-4">
+                        <input
+                          type="text"
+                          placeholder="Search URLs..."
+                          value={filteredSearch}
+                          onChange={(e) => setFilteredSearch(e.target.value)}
+                          className="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="max-h-[320px] overflow-auto space-y-2">
+                        {searchedFilteredUrls.map((url, i) => (
+                          <div
+                            key={i}
+                            className="flex justify-between items-center text-xs p-2 rounded-lg hover:bg-white"
+                          >
+                            <span className="flex-1 break-all">{url}</span>
+
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() =>
+                                  setSelectedUrls((prev) =>
+                                    prev.includes(url) ? prev : [...prev, url],
+                                  )
+                                }
+                                className="text-green-600"
+                              >
+                                <Plus size={16} />
+                              </button>
+
+                              <Link href={url} target="_blank">
+                                <ExternalLink
+                                  size={16}
+                                  className="text-blue-600"
+                                />
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* SELECTED */}
+                <div className="bg-gray-50 p-5 rounded-2xl">
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="font-semibold">
-                      Filtered ({filteredUrls.length})
+                      Selected ({selectedUrls.length})
                     </h2>
 
                     <button
-                      onClick={() =>
-                        setSelectedUrls((prev) => [
-                          ...new Set([...prev, ...filteredUrls]),
-                        ])
-                      }
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm"
+                      onClick={saveSelected}
+                      disabled={saving}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm"
                     >
-                      <Plus size={16} />
-                      Add All
+                      <Save size={16} />
+
+                      {saving ? "Saving..." : "Save"}
                     </button>
                   </div>
 
-                  <div className="max-h-[320px] overflow-auto space-y-2">
-                    {filteredUrls.map((url, i) => (
-                      <div
-                        key={i}
-                        className="flex justify-between items-center text-xs p-2 rounded-lg hover:bg-gray-50"
-                      >
-                        <span className="flex-1 break-all">{url}</span>
-
-                        <div className="flex items-center gap-3">
+                  <div className="max-h-[400px] overflow-auto space-y-2">
+                    {selectedUrls.length === 0 ? (
+                      <div className="text-sm text-gray-500 text-center py-8">
+                        No URLs selected
+                      </div>
+                    ) : (
+                      selectedUrls.map((url, i) => (
+                        <div
+                          key={i}
+                          className="flex justify-between items-center text-xs p-2 rounded-lg hover:bg-white"
+                        >
                           <button
-                            onClick={() =>
-                              setSelectedUrls((prev) =>
-                                prev.includes(url) ? prev : [...prev, url],
-                              )
-                            }
-                            className="text-green-600"
+                            onClick={() => toggleUrl(url)}
+                            className="text-red-500"
                           >
-                            <Plus size={16} />
+                            <X size={16} />
                           </button>
+
+                          <span className="flex-1 mx-3 break-all">{url}</span>
 
                           <Link href={url} target="_blank">
                             <ExternalLink size={16} className="text-blue-600" />
                           </Link>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* SELECTED */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-semibold">
-                  Selected ({selectedUrls.length})
-                </h2>
-
-                <button
-                  onClick={saveSelected}
-                  disabled={saving}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm"
-                >
-                  <Save size={16} />
-
-                  {saving ? "Saving..." : "Save"}
-                </button>
               </div>
-
-              <div className="max-h-[400px] overflow-auto space-y-2">
-                {selectedUrls.length === 0 ? (
-                  <div className="text-sm text-gray-500 text-center py-8">
-                    No URLs selected
-                  </div>
-                ) : (
-                  selectedUrls.map((url, i) => (
-                    <div
-                      key={i}
-                      className="flex justify-between items-center text-xs p-2 rounded-lg hover:bg-gray-50"
-                    >
-                      <button
-                        onClick={() => toggleUrl(url)}
-                        className="text-red-500"
-                      >
-                        <X size={16} />
-                      </button>
-
-                      <span className="flex-1 mx-3 break-all">{url}</span>
-
-                      <Link href={url} target="_blank">
-                        <ExternalLink size={16} className="text-blue-600" />
-                      </Link>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </>
+            )}
+          </div>
         )}
 
         {/* PRODUCTS */}
@@ -380,7 +523,11 @@ export default function SitePage() {
           {urls.map((item) => {
             const variation = getPrimaryVariation(item);
             const variations = getVariations(item);
-
+            console.log(item._id);
+            console.log(comparisonMap);
+            console.log(
+              item.url?.toLowerCase()?.replace(/\/$/, "")?.split("?")[0],
+            );
             return (
               <div
                 key={item._id}
@@ -404,6 +551,26 @@ export default function SitePage() {
                       className="object-cover rounded-xl"
                       unoptimized
                     />
+                    {comparisonMap[
+                      item.url?.toLowerCase()?.replace(/\/$/, "")?.split("?")[0]
+                    ]?.exists ? (
+                      <div className="absolute top-3 left-3 bg-green-600 text-white text-xs px-3 py-1 rounded-full z-10">
+                        Compared (
+                        {
+                          comparisonMap[
+                            item.url
+                              ?.toLowerCase()
+                              ?.replace(/\/$/, "")
+                              ?.split("?")[0]
+                          ]?.count
+                        }
+                        )
+                      </div>
+                    ) : (
+                      <div className="absolute top-3 left-3 bg-gray-400 text-white text-xs px-3 py-1 rounded-full z-10">
+                        Not Compared
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -448,14 +615,25 @@ export default function SitePage() {
                 </div>
 
                 {/* LINK */}
-                <a
-                  href={item.url}
-                  target="_blank"
-                  className="text-sm text-blue-600 mt-4 inline-flex items-center gap-1"
-                >
-                  View Product
-                  <ExternalLink size={14} />
-                </a>
+                <div className="flex justify-between items-center mt-4">
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    className="text-sm text-blue-600  inline-flex items-center gap-1"
+                  >
+                    View Product
+                    <ExternalLink size={14} />
+                  </a>
+                  <button
+                    onClick={() => {
+                      setSelectedCompetitor(item);
+                      setComparisonOpen(true);
+                    }}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700"
+                  >
+                    Compare
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -553,6 +731,12 @@ export default function SitePage() {
           </div>
         </div>
       )}
+
+      <ComparisonModal
+        open={comparisonOpen}
+        onClose={() => setComparisonOpen(false)}
+        preselectedCompetitor={selectedCompetitor}
+      />
     </div>
   );
 }

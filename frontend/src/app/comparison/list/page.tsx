@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import Image from "next/image";
 
 import Link from "next/link";
 
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Cross, Trash2, X } from "lucide-react";
 
 import {
   ProductComparison,
@@ -31,7 +31,9 @@ export default function ComparisonListPage() {
 
   const fetchComparisons = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comparison/all`);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/comparison/all`,
+      );
 
       const data = await res.json();
 
@@ -40,6 +42,45 @@ export default function ComparisonListPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteComparison = async (id: string) => {
+    const confirmDelete = confirm("Delete this comparison?");
+
+    if (!confirmDelete) return;
+
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comparison/${id}`, {
+        method: "DELETE",
+      });
+
+      fetchComparisons();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const removeCompetitor = async (comparisonId: string, site: string) => {
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/comparison/${comparisonId}/remove-competitor`,
+        {
+          method: "PUT",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            site,
+          }),
+        },
+      );
+
+      fetchComparisons();
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -154,6 +195,47 @@ export default function ComparisonListPage() {
                   ? Math.min(...(allPriceValues as number[]))
                   : null;
 
+              const summaryData = [
+                {
+                  site: "Stonecera",
+
+                  price: myVariation?.pricePerM2 || myVariation?.price,
+
+                  coverage: myVariation?.coverage || 0,
+
+                  pieces: myVariation?.pieces || 0,
+                },
+
+                ...item.competitors.map((c) => {
+                  const variation = getVariation(
+                    c.competitorProduct,
+                    c.competitorVariationIndex,
+                  );
+
+                  return {
+                    site: c.site,
+
+                    price: variation?.pricePerM2 || variation?.price || 0,
+
+                    coverage: variation?.coverage || 0,
+
+                    pieces: variation?.pieces || 0,
+                  };
+                }),
+              ];
+
+              const cheapest = summaryData.reduce((min, item) =>
+                item.price < min.price ? item : min,
+              );
+
+              const highestCoverage = summaryData.reduce((max, item) =>
+                item.coverage > max.coverage ? item : max,
+              );
+
+              const mostPieces = summaryData.reduce((max, item) =>
+                item.pieces > max.pieces ? item : max,
+              );
+
               const rows = [
                 {
                   label: "Product",
@@ -198,9 +280,11 @@ export default function ComparisonListPage() {
                 },
 
                 {
-                  label: "SKU",
-                  my: myVariation?.sku,
-                  key: "sku",
+                  label: "£ / m²",
+                  my: myVariation?.pricePerM2
+                    ? `£${myVariation.pricePerM2}`
+                    : "-",
+                  key: "pricePerM2",
                 },
 
                 {
@@ -210,148 +294,200 @@ export default function ComparisonListPage() {
                 },
               ];
 
-              return rows.map((row, rowIndex) => (
-                <tr key={`${item._id}-${row.key}`} className="border-b">
-                  {/* IMAGE */}
-                  {rowIndex === 0 && (
-                    <td
-                      rowSpan={rows.length}
-                      className="p-4 align-top border-r"
-                    >
-                      {item.myProduct?.image && (
-                        <div className="relative w-[180px] h-[180px] rounded-2xl overflow-hidden">
-                          <Image
-                            src={item.myProduct.image}
-                            alt=""
-                            fill
-                            className="object-cover"
-                            unoptimized
-                          />
-                        </div>
-                      )}
-                    </td>
-                  )}
-
-                  {/* FIELD */}
-                  <td className="p-4 font-medium bg-gray-50 border-r">
-                    {row.label}
-                  </td>
-
-                  {/* STONECERA */}
-                  <td className="p-4 border-r">
-                    {row.key === "product" ? (
-                      <a
-                        href={item.myProduct?.url}
-                        target="_blank"
-                        className="text-blue-600 hover:underline"
-                      >
-                        {row.my}
-                      </a>
-                    ) : (
-                      row.my || "-"
-                    )}
-                  </td>
-
-                  {/* COMPETITORS */}
-                  {allSites.map((site) => {
-                    const competitor = item.competitors.find(
-                      (c) => c.site === site,
-                    );
-
-                    if (!competitor) {
-                      return (
-                        <td key={site} className="p-4 border-r text-gray-300">
-                          —
+              return (
+                <React.Fragment key={item._id}>
+                  {rows.map((row, rowIndex) => (
+                    <tr key={`${item._id}-${row.key}`} className="border-b">
+                      {/* IMAGE */}
+                      {rowIndex === 0 && (
+                        <td
+                          rowSpan={rows.length}
+                          className="p-4 align-top border-r"
+                        >
+                          {item.myProduct?.image && (
+                            <div className="relative w-full h-[180px] rounded-2xl overflow-hidden">
+                              <Image
+                                src={item.myProduct.image}
+                                alt=""
+                                fill
+                                className="object-cover"
+                                unoptimized
+                              />
+                            </div>
+                          )}
+                          <div className="flex relative z-10 justify-center mt-3">
+                            <button
+                              onClick={() => deleteComparison(item._id)}
+                              className="bg-red-600 cursor-pointer font-semibold text-white py-1 px-3 rounded-xl flex gap-1 items-center hover:bg-red-700"
+                            >
+                              <Trash2 size={16} />{" "}
+                              <span>Delete Comparison</span>
+                            </button>
+                          </div>
                         </td>
-                      );
-                    }
+                      )}
 
-                    const variation = getVariation(
-                      competitor.competitorProduct,
-                      competitor.competitorVariationIndex,
-                    );
+                      {/* FIELD */}
+                      <td className="p-4 font-medium bg-gray-50 border-r">
+                        {row.label}
+                      </td>
 
-                    let value = "-";
-
-                    switch (row.key) {
-                      case "product":
-                        value =
-                          competitor.competitorProduct?.title ||
-                          competitor.competitorProduct?.name;
-                        break;
-
-                      case "size":
-                        value = variation?.size;
-                        break;
-
-                      case "thickness":
-                        value = variation?.thickness;
-                        break;
-                      case "finish":
-                        value = variation?.finish;
-                        break;
-                      case "coverage":
-                        value = variation?.coverage
-                          ? `${variation.coverage}m²`
-                          : "-";
-                        break;
-
-                      case "pieces":
-                        value = variation?.pieces;
-                        break;
-
-                      case "price":
-                        value = variation?.price ? `£${variation.price}` : "-";
-                        break;
-
-                      case "sku":
-                        value = variation?.sku;
-                        break;
-
-                      case "stock":
-                        value = variation?.inStock
-                          ? "In Stock"
-                          : "Out of Stock";
-                        break;
-                    }
-
-                    const currentPrice =
-                      variation?.pricePerM2 || variation?.price;
-
-                    const isLowest =
-                      row.key === "price" && currentPrice === lowestPrice;
-
-                    return (
-                      <td
-                        key={site}
-                        className={`p-4 border-r transition-all ${
-                          isLowest ? "bg-green-50 border-green-400" : ""
-                        }`}
-                      >
+                      {/* STONECERA */}
+                      <td className="p-4 border-r">
                         {row.key === "product" ? (
                           <a
-                            href={competitor.competitorProduct?.url}
+                            href={item.myProduct?.url}
                             target="_blank"
                             className="text-blue-600 hover:underline"
                           >
-                            {value}
+                            {row.my}
                           </a>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <span>{value || "-"}</span>
-
-                            {isLowest && (
-                              <span className="bg-green-600 text-white text-[10px] px-2 py-1 rounded-full font-bold">
-                                LOWEST
-                              </span>
-                            )}
-                          </div>
+                          row.my || "-"
                         )}
                       </td>
-                    );
-                  })}
-                </tr>
-              ));
+
+                      {/* COMPETITORS */}
+                      {allSites.map((site) => {
+                        const competitor = item.competitors.find(
+                          (c) => c.site === site,
+                        );
+
+                        if (!competitor) {
+                          return (
+                            <td
+                              key={site}
+                              className="p-4 border-r text-gray-300"
+                            >
+                              —
+                            </td>
+                          );
+                        }
+
+                        const variation = getVariation(
+                          competitor.competitorProduct,
+                          competitor.competitorVariationIndex,
+                        );
+
+                        let value = "-";
+
+                        switch (row.key) {
+                          case "product":
+                            value =
+                              competitor.competitorProduct?.title ||
+                              competitor.competitorProduct?.name;
+                            break;
+
+                          case "size":
+                            value = variation?.size;
+                            break;
+
+                          case "thickness":
+                            value = variation?.thickness;
+                            break;
+                          case "finish":
+                            value = variation?.finish;
+                            break;
+                          case "coverage":
+                            value = variation?.coverage
+                              ? `${variation.coverage}m²`
+                              : "-";
+                            break;
+
+                          case "pieces":
+                            value = variation?.pieces;
+                            break;
+
+                          case "price":
+                            value = variation?.price
+                              ? `£${variation.price}`
+                              : "-";
+                            break;
+
+                          case "pricePerM2":
+                            value = variation?.pricePerM2
+                              ? `£${variation.pricePerM2}`
+                              : "-";
+                            break;
+
+                          case "stock":
+                            value = variation?.inStock
+                              ? "In Stock"
+                              : "Out of Stock";
+                            break;
+                        }
+
+                        const currentPrice =
+                          variation?.pricePerM2 || variation?.price;
+
+                        const isLowest =
+                          row.key === "price" && currentPrice === lowestPrice;
+
+                        return (
+                          <td
+                            key={site}
+                            className={`p-4 border-r transition-all relative ${
+                              isLowest ? "bg-green-50 border-green-400" : ""
+                            }`}
+                          >
+                            {row.key === "product" ? (
+                              <div className="">
+                                <a
+                                  href={competitor.competitorProduct?.url}
+                                  target="_blank"
+                                  className="text-blue-600 hover:underline block"
+                                >
+                                  {value}
+                                </a>
+
+                                <button
+                                  onClick={() =>
+                                    removeCompetitor(item._id, site)
+                                  }
+                                  className="text-xs absolute -left-1 -top-3 cursor-pointer flex gap-1 bg-red-50 text-red-600 p-1 rounded-xl hover:bg-red-100"
+                                >
+                                  <X size={16} /> <span>Remove</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span>{value || "-"}</span>
+
+                                {isLowest && (
+                                  <span className="bg-green-600 text-white text-[10px] px-2 py-1 rounded-full font-bold">
+                                    LOWEST
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                  {/* SUMMARY */}
+                  <tr className="bg-gray-50 border-b">
+                    <td colSpan={3 + allSites.length + 1} className="p-5">
+                      <div className="flex flex-wrap gap-3">
+                        <div className="bg-green-100 text-green-800 px-4 py-2 rounded-xl text-sm font-medium">
+                          🏆 Cheapest → {cheapest.site} (£{cheapest.price})
+                        </div>
+
+                        <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-xl text-sm font-medium">
+                          📦 Highest Coverage → {highestCoverage.site} (
+                          {highestCoverage.coverage}
+                          m²)
+                        </div>
+
+                        <div className="bg-orange-100 text-orange-800 px-4 py-2 rounded-xl text-sm font-medium">
+                          🧱 Most Pieces → {mostPieces.site} (
+                          {mostPieces.pieces})
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </React.Fragment>
+              );
             })}
           </tbody>
         </table>

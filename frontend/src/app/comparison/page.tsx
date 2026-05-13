@@ -287,7 +287,19 @@ export default function ComparisonPage() {
                                 <p className="font-medium">{variation.label}</p>
 
                                 <p className="text-xs text-gray-500 mt-1">
-                                  {variation.coverage}m²
+                                  {[
+                                    variation.size,
+                                    variation.thickness,
+                                    variation.finish,
+                                    variation.coverage
+                                      ? `${variation.coverage}m²`
+                                      : null,
+                                    variation.pieces
+                                      ? `${variation.pieces} pcs`
+                                      : null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" | ")}
                                 </p>
                               </div>
 
@@ -416,8 +428,19 @@ export default function ComparisonPage() {
                                 <p className="font-medium">{variation.label}</p>
 
                                 <p className="text-xs text-gray-500 mt-1">
-                                  {variation.coverage}
-                                  m²
+                                  {[
+                                    variation.size,
+                                    variation.thickness,
+                                    variation.finish,
+                                    variation.coverage
+                                      ? `${variation.coverage}m²`
+                                      : null,
+                                    variation.pieces
+                                      ? `${variation.pieces} pcs`
+                                      : null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" | ")}
                                 </p>
                               </div>
 
