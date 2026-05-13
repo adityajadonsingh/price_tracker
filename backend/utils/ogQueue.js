@@ -32,10 +32,10 @@ async function processQueue(items, concurrency = 2) {
           scraped = await runScraper(null, item.url);
 
           og = {
-  title: scraped?.name || null,
-  description: null,
-  image: scraped?.image || null,
-};
+            title: scraped?.name || null,
+            description: null,
+            image: scraped?.image || null,
+          };
         } else {
           // DIFFERENT MODES
           if (isCloudflareSite) {
@@ -100,11 +100,44 @@ async function processQueue(items, concurrency = 2) {
           await browser.close();
         }
 
+        const existing = await TrackedUrl.findById(item._id);
+
+        const newHistory = [...(existing.history || [])];
+
+        scraped?.variations?.forEach((variation, index) => {
+          const latest = [...newHistory]
+            .reverse()
+            .find((h) => h.variationIndex === index);
+
+          const changed =
+            !latest ||
+            latest.price !== variation.price ||
+            latest.pricePerM2 !== variation.pricePerM2;
+
+          // ONLY SAVE IF PRICE CHANGED
+          if (changed) {
+            newHistory.push({
+              variationIndex: index,
+
+              price: variation.price,
+
+              pricePerM2: variation.pricePerM2,
+
+              date: new Date(),
+            });
+          }
+        });
+
         await TrackedUrl.findByIdAndUpdate(item._id, {
           title: og.title,
+
           description: og.description,
+
           image: og.image,
+
           priceData: scraped,
+
+          history: newHistory,
         });
 
         console.log(`✅ Saved: ${item.url}`);

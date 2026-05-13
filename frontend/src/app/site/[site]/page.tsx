@@ -94,6 +94,8 @@ export default function SitePage() {
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [selectedCompetitor, setSelectedCompetitor] = useState<any>(null);
   const [comparisonMap, setComparisonMap] = useState<any>({});
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
+  const [refreshingAll, setRefreshingAll] = useState(false);
 
   const searchedFilteredUrls = filteredUrls.filter((url) =>
     url.toLowerCase().includes(filteredSearch.toLowerCase()),
@@ -121,8 +123,6 @@ export default function SitePage() {
 
     setUrls(data);
   };
-
-
 
   useEffect(() => {
     const interval = setInterval(fetchSavedUrls, 5000);
@@ -206,6 +206,43 @@ export default function SitePage() {
     }
   };
 
+  /* REFRESH SINGLE PRODUCT */
+  const refreshProduct = async (id: string) => {
+    try {
+      setRefreshingId(id);
+
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/urls/refresh/${id}`, {
+        method: "POST",
+      });
+
+      await fetchSavedUrls();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRefreshingId(null);
+    }
+  };
+
+  /* REFRESH ALL */
+  const refreshAllProducts = async () => {
+    try {
+      setRefreshingAll(true);
+
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/urls/refresh-all/${site}`,
+        {
+          method: "POST",
+        },
+      );
+
+      await fetchSavedUrls();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRefreshingAll(false);
+    }
+  };
+
   /* DELETE PRODUCT */
   const deleteProduct = async (id: string) => {
     try {
@@ -280,10 +317,20 @@ export default function SitePage() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* HEADER */}
         <div className="bg-white p-6 rounded-2xl shadow-sm">
-          <div className="flex items-center gap-3">
-            <PackageSearch className="text-blue-600" size={28} />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <PackageSearch className="text-blue-600" size={28} />
 
-            <h1 className="text-2xl font-bold capitalize">{site}</h1>
+              <h1 className="text-2xl font-bold capitalize">{site}</h1>
+            </div>
+
+            <button
+              onClick={refreshAllProducts}
+              disabled={refreshingAll}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-3 rounded-xl text-sm font-medium"
+            >
+              {refreshingAll ? "Refreshing..." : "Refresh All"}
+            </button>
           </div>
         </div>
 
@@ -539,6 +586,14 @@ export default function SitePage() {
                   className="absolute top-3 z-10 rounded-full bg-red-600 p-2 cursor-pointer right-3 text-red-500 hover:text-red-700"
                 >
                   <Trash2 size={16} color="white" />
+                </button>
+
+                {/* REFRESH */}
+                <button
+                  onClick={() => refreshProduct(item._id)}
+                  className="absolute top-3 z-10 rounded-full bg-blue-600 w-[33px] h-[33px] pb-1 flex justify-center items-center cursor-pointer right-12 text-white"
+                >
+                  {refreshingId === item._id ? "..." : "↻"}
                 </button>
 
                 {/* IMAGE */}
